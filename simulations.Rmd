@@ -1,0 +1,207 @@
+# Let's first truncate the region.
+```{r, echo=T}
+  library(data.table)
+  library(flashpcaR)
+  ld_matrix = as.matrix(fread("~/Programming/OpenSource/MyGitHub/coloc2sim/data_copyover/gwas_furin_region.ld", header=F))
+  #ld_matrix = flashpca(ld_matrix, do_loadings = TRUE, verbose = T, stand="center", ndim=4580)
+  ld_matrix = ld_matrix[1:1000,1:1000] 
+  system.time(dcSVD(ld_matrix))
+  system.time(baseSVD(ld_matrix))
+
+  dim(ld_matrix)
+  a = simulate_betas_w_ld(1,ld_matrix = ld_matrix, 0.01,50000)
+ # ld_matrix_inv = invert_ld_matrix(ld_matrix)
+  plot(ld_matrix_inv %*% a$beta_gwas)
+  library(gplots)
+```
+
+### TEST SVD truncation plus Ridge regression.
+
+```{r, echo=T}
+  s_vd = svd(ld_matrix)
+  k = 1:50
+  real_results = list()
+  rme_list= list()
+  item = 1
+  min_ld_reg = invert_ld_matrix(ld_matrix)$reg_factor
+  a =simulate_betas_w_ld(1,ld_matrix = ld_matrix, 0.5,50000,idx=47) 
+  par(mfrow=(c(2,1)))
+  library(MASS)
+  item = 1
+  r_mean_collapse = c()
+  r_mean_no_collapse =c()
+  
+   ld_matrix_inv = ginv(ld_matrix)
+    k.res =kmeans(ld_matrix, 16)
+    for(k in 1:1000){
+       a =simulate_betas_w_ld(1,ld_matrix = ld_matrix, 0.5,50000)
+       a$recapitulate = ld_matrix_inv %*% a$beta_gwas
+       beta_cluster = unlist(lapply(split(a$recapitulate, f=k.res$cluster),function(x){sum(x)}))
+       true_beta_cluster= unlist(lapply(split(a$true_beta,f=k.res$cluster),function(x){sum(x)}))
+       rme = sqrt(sum((a$recapitulate - a$true_beta)^2))
+       rmes = c(rmes,rme)
+      # plot(abs(a$true_beta), main=paste(j))
+      # plot(abs(a$recapitulate), main=paste(j))
+       rme = sqrt(sum((beta_cluster - true_beta_cluster)^2))
+       rmes2 = c(rmes2,rme)
+    }
+    r_mean_no_collapse= c(r_mean_no_collapse,mean(rmes2))
+    r_mean_collapse = c(r_mean_collapse, mean(rmes))
+  
+  for(j in seq(from=min_ld_reg,to = 0.3,by=0.01)){
+    rmes=c()
+    print(j)
+    rmes2=c()
+    ld_matrix_inv = invert_ld_matrix(ld_matrix = ld_matrix, lambda = j)
+    for(k in 1:1000){
+       a =simulate_betas_w_ld(1,ld_matrix = ld_matrix, 0.5,50000)
+       a$recapitulate = ld_matrix_inv %*% a$beta_gwas
+       beta_cluster = unlist(lapply(split(a$recapitulate, f=k.res$cluster),function(x){sum(x)}))
+       true_beta_cluster= unlist(lapply(split(a$true_beta,f=k.res$cluster),function(x){sum(x)}))
+       rme = sqrt(sum((a$recapitulate - a$true_beta)^2))
+       rmes = c(rmes,rme)
+      # plot(abs(a$true_beta), main=paste(j))
+      # plot(abs(a$recapitulate), main=paste(j))
+       rme = sqrt(sum((beta_cluster - true_beta_cluster)^2))
+       rmes2 = c(rmes2,rme)
+    }
+    r_mean_no_collapse= c(r_mean_no_collapse,mean(rmes2))
+    r_mean_collapse = c(r_mean_collapse, mean(rmes))
+     #print(mean(rmes))
+     #print(mean(rmes2))
+     #rme
+  }
+    for(j in 2:(ncol(ld_matrix)-50)){
+      rmes = c()
+      test_d = 1/s_vd$d
+      test_d[(j):length(test_d)] = 0
+      ld_matrix_inv = ((s_vd$v) %*% diag(test_d) %*% t(s_vd$u)) 
+      rmes=c()
+      print(j)
+      rmes2=c()
+        for(k in 1:1000){
+         a =simulate_betas_w_ld(1,ld_matrix = ld_matrix, 0.5,50000)
+         a$recapitulate = ld_matrix_inv %*% a$beta_gwas
+         beta_cluster = unlist(lapply(split(a$recapitulate, f=k.res$cluster),function(x){sum(x)}))
+         true_beta_cluster= unlist(lapply(split(a$true_beta,f=k.res$cluster),function(x){sum(x)}))
+         rme = sqrt(sum((a$recapitulate - a$true_beta)^2))
+         rmes = c(rmes,rme)
+        # plot(abs(a$true_beta), main=paste(j))
+        # plot(abs(a$recapitulate), main=paste(j))
+         rme = sqrt(sum((beta_cluster - true_beta_cluster)^2))
+         rmes2 = c(rmes2,rme)
+        }
+      r_mean_no_collapse= c(r_mean_no_collapse,mean(rmes2))
+      r_mean_collapse = c(r_mean_collapse, mean(rmes))
+    } 
+    
+    library(corpcor)
+   
+    ld_matrix2 = cor.shrink(ld_matrix)
+    shrink_ld = solve(ld_matrix2)
+     rmes=c()
+      print(j)
+      rmes2=c()
+       for(k in 1:1000){
+         a =simulate_betas_w_ld(1,ld_matrix = ld_matrix, 0.5,50000)
+         a$recapitulate = ld_matrix_inv %*% a$beta_gwas
+         beta_cluster = unlist(lapply(split(a$recapitulate, f=k.res$cluster),function(x){sum(x)}))
+         true_beta_cluster= unlist(lapply(split(a$true_beta,f=k.res$cluster),function(x){sum(x)}))
+         rme = sqrt(sum((a$recapitulate - a$true_beta)^2))
+         rmes = c(rmes,rme)
+        # plot(abs(a$true_beta), main=paste(j))
+        # plot(abs(a$recapitulate), main=paste(j))
+         rme = sqrt(sum((beta_cluster - true_beta_cluster)^2))
+         rmes2 = c(rmes2,rme)
+        }
+   
+  
+      
+   res.reg = cbind(r_mean_collapse,r_mean_no_collapse)
+   rownames(res.reg) = c("Pseudo-Inverse",seq(from=min_ld_reg,to = 0.3,by=0.01),2:(ncol(ld_matrix)-50))
+    
+  res.reg2 = cbind(mean(rmes),mean(rmes2))
+  res.reg = cbind(r_mean_collapse,r_mean_no_collapse)
+  res.out = rbind(res.reg2,res.reg)
+  #legit_regions.
+  elbows  = c() 
+  for(k in 2:99){
+    k.res = kmeans(ld_matrix^2,16)
+    elbows = c(elbows, k.res$betweenss/k.res$totss)
+  }
+  
+  k = kmeans(ld_matrix,which(elbows > 0.995)[1])
+  plot(a$recapitulate)
+  plot(a)
+  
+  library(MASS)
+  ld_matrix_inv = ginv(ld_matrix)
+  rme = c()
+  rme_list = list()
+  item = 1
+  for(h2 in seq(from=0.01,to=0.05,by=0.005)){
+      rmes = c() 
+    for(i in 1:10000){
+       a =simulate_betas_w_ld(2,ld_matrix = ld_matrix, 0.5,50000)   
+       a$recapitulate = ld_matrix_inv %*% a$beta_gwas
+       rme = sqrt(sum((a$recapitulate - a$true_beta)^2))
+       rmes = c(rmes,rme)
+    }
+    rme_list[[item]] = rmes
+    item = item + 1
+  }
+  a =simulate_betas_w_ld(1,ld_matrix = ld_matrix, 0.5,50000, idx = 47)   
+  b = recapitulate_results(a,ld_matrix_inv, .5, 50000)
+  plot(b$z)
+  a$recapitulate = ld_matrix_inv * a$beta_gwas
+  plot(a$true_beta)
+  plot(a$recapitulate)
+  for(j in seq(from=min_ld_reg,to = 0.3,by=0.01)){
+    rmes = c()
+    print(j)
+    ld_matrix_inv = invert_ld_matrix(ld_matrix,lambda=j)
+    for(i in 1:1000){
+      a =simulate_betas_w_ld(1,ld_matrix = ld_matrix, h2 = .5,50000)
+      a$recapitulate = ld_matrix_inv %*% a$beta_gwas
+      rme = sqrt(sum((a$recapitulate - a$true_beta)^2))
+      rmes = c(rmes,rme)
+    }
+    rme_list[[item]] = rmes
+    item = item + 1
+  }
+  item = 1 
+  rme_svd = list()
+  a =simulate_betas_w_ld(3,ld_matrix = ld_matrix, 0.5,50000)
+  for(j in 2:(ncol(ld_matrix)-20)){
+    rmes = c()
+    test_d = 1/s_vd$d
+    test_d[(j):length(test_d)] = 0
+    test_ld = ((s_vd$v) %*% diag(test_d) %*% t(s_vd$u)) 
+    a$recapitulate = test_ld %*% a$beta_gwas
+    plot(abs(a$true_beta), main=paste(j))
+    plot(abs(a$recapitulate), main=paste(j))
+  }
+    for(i in 1:1000){
+      a =simulate_betas_w_ld(1,ld_matrix = ld_matrix, 0.5,50000)
+      a$recapitulate = test_ld %*% a$beta_gwas
+     # new_betas = rep(0,ncol(ld_matrix))
+    #  for(k in 1:(j)){
+    #  new_betas = new_betas  + ((s_vd$u[,k] * (a$beta_gwas))/ s_vd$d[k]) * (s_vd$v[,k])
+    #  }
+      plot(a$true_beta - a$recapitulate)
+      next
+      rme = sqrt(sum((a$true_beta - a$recapitulate)^2))
+      rmes = c(rmes,rme)
+    }
+    rme_svd[[item]] = rmes
+    item = item + 1
+  }
+  
+  
+  for(i in 1:ncol(s_vd$u)){
+    test_d = s_vd$d
+    test_d[i:length(test_d)] = 0
+    ld_test = s_vd$u %*% diag(test_d) %*% t(s_vd$v)
+  }
+  s_vd$d[1:10]
+```

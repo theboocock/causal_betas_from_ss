@@ -1,0 +1,29 @@
+```{r, echo=T}
+  all_gene = load_all_gen()
+  # Ok so we just loaded chromosome 1
+  bed_input = fread("../fourier_ls-all.bed", header=T)
+  bed_input = bed_input[bed_input$chr == "chr1",]
+  
+  p = c(0.01,0.05,.1,0.2)
+  region_list = list()
+  for(j in 1:10){
+    x = bed_input[sample(1:nrow(bed_input),size = 1),]
+    print(j)
+    idxs = (which(all_gene[[1]]$legend_file$V2 > x$start &  all_gene[[1]]$legend_file$V2 < x$stop))
+    region_list[[j]] = list(gen= all_gene[[1]]$gen_file[idxs,], legend = all_gene[[1]]$legend_file[idxs,], ld_matrix=cor(t(all_gene[[1]]$gen_file[idxs,])))
+  }
+  # All chromosome regions.
+  system.time(rsvd(region_list[[1]]))
+  # So we should simulate now.
+  h2 = 0.5
+  n= 50000
+  for(i in 1:100){
+    #rpois(1,1)
+    idx = sample(1:nrow(bed_input),size = 1)
+    res.sim = simulate_betas_w_ld(1,ld_matrix = region_list[[idx]]$ld_matrix,h2=h2,n=n)
+    invert = ginv(region_list[[idx]]$ld_matrix)
+    recap = recapitulate_results(sim_list = res.sim, ld_matrix_inv = invert,h2 = h2,n=n)
+    sum((recap$beta_hat - res.sim$true_beta)^2)
+  }
+  
+```
