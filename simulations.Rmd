@@ -4,15 +4,29 @@
   library(flashpcaR)
   ld_matrix = as.matrix(fread("~/Programming/OpenSource/MyGitHub/coloc2sim/data_copyover/gwas_furin_region.ld", header=F))
   #ld_matrix = flashpca(ld_matrix, do_loadings = TRUE, verbose = T, stand="center", ndim=4580)
-  ld_matrix = ld_matrix[1:1000,1:1000] 
+  ld_matrix = ld_matrix[1:100,1:100] 
   system.time(dcSVD(ld_matrix))
   system.time(baseSVD(ld_matrix))
 
   dim(ld_matrix)
-  a = simulate_betas_w_ld(1,ld_matrix = ld_matrix, 0.01,50000)
+  a = simulate_betas_w_ld(1,ld_matrix = ld_mat2$ld_matrix, 0.5,50000,idx = 47)
  # ld_matrix_inv = invert_ld_matrix(ld_matrix)
-  plot(ld_matrix_inv %*% a$beta_gwas)
-  library(gplots)
+  library(MASS)
+  ld_matrix_inv = ginv(ld_matrix)
+  #ld_matrix_inv
+  
+  #ld_matrix_inv = invert_ld_matrix(ld_matrix)$ld_matrix
+  #ld_matrix_inv
+  a$recapitulate = ld_matrix_inv %*% a$beta_gwas
+  plot(a$beta_gwas, main="BETA_GWAS")
+  plot(a$recapitulate,main="BETA_HAT")
+  beta_cluster = unlist(lapply(split(a$recapitulate, f=k.res$cluster),function(x){sum(x)}))
+       true_beta_cluster= unlist(lapply(split(a$true_beta,f=k.res$cluster),function(x){sum(x)}))
+  
+  plot(beta_cluster, main="BETA_CLUSTER",xlab = "Clusters")
+  plot(true_beta_cluster, main="TRUE_BETA_CLUSTER",xlab="Clusters")
+       
+      library(gplots)
 ```
 
 ### TEST SVD truncation plus Ridge regression.
@@ -86,6 +100,7 @@
          true_beta_cluster= unlist(lapply(split(a$true_beta,f=k.res$cluster),function(x){sum(x)}))
          rme = sqrt(sum((a$recapitulate - a$true_beta)^2))
          rmes = c(rmes,rme)
+         first_annot = 1:length(ld_matrix)
         # plot(abs(a$true_beta), main=paste(j))
         # plot(abs(a$recapitulate), main=paste(j))
          rme = sqrt(sum((beta_cluster - true_beta_cluster)^2))

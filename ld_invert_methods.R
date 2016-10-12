@@ -69,5 +69,5 @@ invert_ld_matrix_ridge = function(ld_matrix,max_iter =100,lambda = NULL ){
   if(!invert_successful){
     stop("Could not invert LD matrix.")
   }
-  return(list(ld_matrix=chol2inv(chol_ld_matrix),reg_factor=reg_factor))
+  return(list(ld_matrix=chol2inv(chol_ld_matrix),reg_factor=reg_factor,chol_mat = chol_ld_matrix))
 }

@@ -1,29 +1,185 @@
 ```{r, echo=T}
+  library(data.table)
   all_gene = load_all_gen()
   # Ok so we just loaded chromosome 1
   bed_input = fread("../fourier_ls-all.bed", header=T)
-  bed_input = bed_input[bed_input$chr == "chr1",]
-  
+  bed_input = bed_input[bed_input$chr == "chr22",]
+  library(MASS)
   p = c(0.01,0.05,.1,0.2)
   region_list = list()
-  for(j in 1:10){
-    x = bed_input[sample(1:nrow(bed_input),size = 1),]
+  selected_regions = c()
+  for(j in 1:24){
+    x = sample(1:nrow(bed_input),size = 1)
+    bed_in  = bed_input[x,]
+    selected_regions = c(selected_regions,x)
     print(j)
-    idxs = (which(all_gene[[1]]$legend_file$V2 > x$start &  all_gene[[1]]$legend_file$V2 < x$stop))
-    region_list[[j]] = list(gen= all_gene[[1]]$gen_file[idxs,], legend = all_gene[[1]]$legend_file[idxs,], ld_matrix=cor(t(all_gene[[1]]$gen_file[idxs,])))
+    idxs = (which(all_gene[[1]]$legend_file$V2 > bed_in$start &  all_gene[[1]]$legend_file$V2 < bed_in$stop))
+    print(length(idxs))
+     if(length(idxs) ==0){
+      next
+    }
+    ld_matrix=cor(t(all_gene[[1]]$gen_file[idxs,]))
+    region_list[[j]] = list(gen= all_gene[[1]]$gen_file[idxs,], legend = all_gene[[1]]$legend_file[idxs,],ld_matrix=ld_matrix ,pseudo_inverse=ginv(ld_matrix))
   }
   # All chromosome regions.
-  system.time(rsvd(region_list[[1]]))
+ #system.time(rsvd(region_list[[1]]))
+  
+  #system.time(dcSVD(region_list[[1]]$ld_matrix))
+  #system.time(baseSVD(region_list[[1]]$ld_matrix))
   # So we should simulate now.
-  h2 = 0.5
-  n= 50000
-  for(i in 1:100){
-    #rpois(1,1)
-    idx = sample(1:nrow(bed_input),size = 1)
-    res.sim = simulate_betas_w_ld(1,ld_matrix = region_list[[idx]]$ld_matrix,h2=h2,n=n)
-    invert = ginv(region_list[[idx]]$ld_matrix)
-    recap = recapitulate_results(sim_list = res.sim, ld_matrix_inv = invert,h2 = h2,n=n)
-    sum((recap$beta_hat - res.sim$true_beta)^2)
+  # So we have 10 regions on chromosome 22.
+  h2 = seq(0.02,0.1,by=0.01)
+  
+  dim(all_gene[[1]]$legend_file)
+  
+  percent_causal = round(seq(from=0.001,to=,by=0.1) * 84302)
+  
+  one = (round(runif(n = percent_causal[1],min=1,10)))
+  #per_locus_heritability = 0.02 / 10
+  table(one)
+  
+  for(i in 1:length(percent_causal)){
+    g = rnorm(n=percent_causal[i],mean=0,sd=sqrt(.1/percent_causal[i]))
+    one = (round(runif(n = percent_causal[i],min=1,10)))
+    beta_local = split(x = g,one)
+      rmsd = c()
+      beta_diff= c()
+      idxs= list()
+      for(j in 1:10){
+        partition = sample(1:ncol(region_list[[j]]$ld_matrix),size =ncol(region_list[[j]]$ld_matrix)/2 )
+        partition = 500:1000
+        not_partition = (!(1:ncol(region_list[[j]]$ld_matrix) %in% partition))
+        idx = sample(partition,replace = F,size = 1)
+        
+         #partition = sample(1500:2000,size =ncol(region_list[[j]]$ld_matrix)/2 )
+        partition = (1500:2000)
+        not_partition = (!(1:ncol(region_list[[j]]$ld_matrix) %in% partition))
+        
+      #  s_vd= svd(region_list[[j]]$ld_matrix)
+       # betas = beta_local[[j]]
+       # test_d = 1/s_vd$d
+      test_d[(k):length(test_d)] = 0
+      ld_matrix_inv = ((s_vd$v) %*% diag(test_d) %*% t(s_vd$u)) 
+        #etas = g[idx]
+        #ondd
+        res.sim = simulate_betas_w_ld(causal_number = 2,ld_matrix = region_list[[1]]$ld_matrix,h2=0.001,n=n,chol_mat = chol_mat)
+        res.sim2 = recapitulate_results(res.sim,region_list[[1]]$pseudo_inverse,h2=0.001,n=n,k=4198)
+        idx = which(res.sim$true_beta != 0)
+        hess_estimator(res.sim,region_list[[j]]$ld_matrix,n)
+        sum(res.sim$beta_effective_noise^2)
+        sum(res.sim$true_beta^2)
+        plot(res.sim2$beta_hat^2)
+        plot(res.sim$true_beta^2)
+        
+        
+        #cond_distribution  = region_list[[j]]$ld_matrix[partition,partition] - region_list[[j]]$ld_matrix[partition,not_partition] %*% ginv(region_list[[j]]$ld_matrix[not_partition,not_partition]) %*%region_list[[j]]$ld_matrix[not_partition,partition]
+        sum_part = c()
+        sum_part2 =c()
+        ld_score = c()
+        true_beta_vec = c()
+        sum_beta_gwas = c()
+        for(idx in 1:(dim(region_list[[1]]$legend)[1])){
+        #  true_beta_vec = c(true_beta_vec,t(res.sim$true_beta[idx])  + region_list[[j]]$ld_matrix[idx,c(1:dim(region_list[[1]]$legend)[1])[-idx]]  %*% res.sim$true_beta[c(1:dim(region_list[[1]]$legend)[1])[-idx]]) 
+          
+        sum_beta_gwas = c(sum_beta_gwas, res.sim$beta_gwas[idx] +region_list[[j]]$ld_matrix[idx,c(1:dim(region_list[[1]]$legend)[1])[-idx]]  %*% res.sim$beta_gwas[c(1:dim(region_list[[1]]$legend)[1])[-idx]]) 
+        sum_part = c(sum_part,t(res.sim2$beta_hat[idx])^2  + t(res.sim2$beta_hat[idx]) %*% region_list[[1]]$ld_matrix[idx,c(1:dim(region_list[[1]]$legend)[1])[-idx]]  %*% res.sim2$beta_hat[c(1:dim(region_list[[1]]$legend)[1])[-idx]])
+        true_beta_vec = c(true_beta_vec,t(res.sim$true_beta[idx]) %*% region_list[[j]]$ld_matrix[idx,c(1:dim(region_list[[1]]$legend)[1])]  %*% res.sim$true_beta[c(1:dim(region_list[[1]]$legend)[1])]) 
+        
+        
+      #  print(t(res.sim2$beta_hat[idx])^2  + t(res.sim2$beta_hat[idx]) %*% region_list[[j]]$ld_matrix[idx,c(1:dim(region_list[[1]]$legend)[1])[-idx]]  %*% res.sim2$beta_hat[c(1:dim(region_list[[1]]$legend)[1])[-idx]])
+        
+        ld_score = c(ld_score,t(res.sim$beta_gwas[idx])^2  + t(res.sim$beta_gwas[idx]) %*% region_list[[j]]$ld_matrix[idx,c(1:dim(region_list[[1]]$legend)[1])[-idx]]  %*% res.sim$beta_gwas[c(1:dim(region_list[[1]]$legend)[1])[-idx]])
+        print(t(res.sim$beta_gwas[idx]) %*% region_list[[j]]$ld_matrix[idx,c(1:dim(region_list[[1]]$legend)[1])[-idx]]  %*% res.sim$beta_gwas[c(1:dim(region_list[[1]]$legend)[1])[-idx]])
+        #ld_score = c()
+        }
+        par(mfrow=c(4,1))
+        plot(true_beta_vec)
+        plot(sum_part)
+        plot(res.sim$true_beta^2)
+        plot(sum_part2)
+        plot(true_beta_vec^2/hess_estimator(res.sim,region_list[[j]]$ld_matrix,n))
+        plot(res.sim$beta_gwas^2)
+        
+        
+        print(sum(sum_part))
+        print(sum(sum_part2))
+        p1  = t(res.sim$beta_gwas[partition]) %*% region_list[[j]]$pseudo_inverse[partition,partition] %*% res.sim$beta_gwas[partition] + t(res.sim$beta_gwas[partition]) %*% (region_list[[j]]$pseudo_inverse[partition,not_partition]) %*% res.sim$beta_gwas[not_partition]
+       
+        A= 
+         
+        p2 = t(res.sim$beta_gwas[not_partition]) %*% region_list[[j]]$pseudo_inverse[not_partition,not_partition] %*% res.sim$beta_gwas[not_partition] +t(res.sim$beta_gwas[partition]) %*% (region_list[[j]]$pseudo_inverse[partition,not_partition]) %*% res.sim$beta_gwas[not_partition]
+        p1 + p2 +  2*t(res.sim$beta_gwas[partition]) %*% (region_list[[j]]$pseudo_inverse[partition,not_partition]) %*% res.sim$beta_gwas[not_partition]
+        p1/(p1 + p2 + 2*t(res.sim$beta_gwas[partition]) %*% (region_list[[j]]$pseudo_inverse[partition,not_partition]) %*% res.sim$beta_gwas[not_partition])
+        p2/(p1 + p2 + 2*t(res.sim$beta_gwas[partition]) %*% (region_list[[j]]$pseudo_inverse[partition,not_partition]) %*% res.sim$beta_gwas[not_partition])
+        t(res.sim$beta_gwas) %*% region_list[[j]]$pseudo_inverse %*% res.sim$beta_gwas
+        sum(res.sim2$beta_hat[partition]^2)/sum(res.sim2$beta_hat[not_partition]^2)
+        summary(lm(res.sim$true_beta^2 ~ not_partition))
+        par(mfrow=c(2,1))
+        plot(res.sim$true_beta)
+        plot(res.sim2$beta_hat)
+        idx_causal = res.sim$true_beta != 0
+        beta_diff = c(beta_diff,(abs(res.sim2$beta_hat[idx_causal]) - abs(res.sim$true_beta[idx_causal])))
+        print(sum(res.sim2$beta_hat^2))
+        print(sum(res.sim$true_beta^2))
+        rmsd = c(rmsd,((res.sim$true_beta - res.sim2$beta_)^2))
+        print(mean((res.sim$true_beta - res.sim2$beta_hat)))
+        for(k in seq(300,4000,by=100)){
+            
+          print(mean((res.sim$true_beta - res.sim2$beta_hat_bias)))
+          idx_causal = res.sim$true_beta != 0
+          print(mean((res.sim$true_beta[idx_causal] - res.sim2$beta_hat_bias[idx_causal])))
+          #beta_diff = c(beta_diff,(abs(res.sim2$beta_hat[idx_causal]) - abs(res.sim$true_beta[idx_causal])))
+        }
+    #    print(j)
+        #plot(beta_diff)
+     #   print(mean(abs(res.sim2$beta_hat[idx_causal]) - abs(res.sim$true_beta[idx_causal])))
+      }
+      plot(rmsd,main=percent_causal[i])
+      print(mean(rmsd))
+    }
+     
   }
+  
+  rnorm()
+  
+  
+  #ns= c(10000,20000,50000,100000)
+  n = 50000
+  p = 0.5
+  
+  simulat
+  
+  sim_number = 1
+  
+  
+  h2 = 0.05
+  res.out = data.frame(sim=rep(NA,3*3),causals=rep(NA,3*3), var_rmsd=rep(NA,3*3),mean_rmsd=rep(NA,3*3),var_diff=rep(NA,3*3),mean_diff=rep(NA,3*3))
+  for(h in h2){
+    for(caus in 1:3){
+      print(caus)
+      beta_diff = c()
+      rmsd = c()
+      for(i in 1:100){
+    #rpois(1,1)
+      idx = sample(1:length(region_list),size = 1)
+      is_causal = rbinom(1,1,p)
+      #if(is_causal == 1){
+       #   while( rbinom(1,1,p) == 1){
+        #    number_of_causals = number_of_causals + 1
+        #}
+      res.sim = simulate_betas_w_ld(causal_number = caus,ld_matrix = region_list[[idx]]$ld_matrix,h2=h,n=n) 
+      res.sim2 = recapitulate_results(res.sim,region_list[[idx]]$pseudo_inverse,h2=h,n=n)
+      idx_causal = res.sim$true_beta != 0
+      beta_diff = c(beta_diff,(abs(res.sim2$beta_hat[idx_causal]) - abs(res.sim$true_beta[idx_causal])))
+      rmsd = c(rmsd,(sum((res.sim$true_beta - res.sim2$beta_hat)^2)))
+      }
+    res.out[sim_number,] = c(sim_number,caus,var(rmsd),mean(rmsd),var(rmsd), mean(beta_diff))
+    sim_number = sim_number + 1
+    }
+  }
+  #  invert = ginv(region_list[[idx]]$ld_matrix)
+  #  recap = recapitulate_results(sim_list = res.sim, ld_matrix_inv = invert,h2 = h2,n=n)
+   # sum((recap$beta_hat - res.sim$true_beta)^2)
+  #}
   
 ```

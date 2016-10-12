@@ -1,0 +1,188 @@
+# Simulate a partition of variants
+#
+
+```{r, echo=T}
+
+    partition = sample(1:ncol(region_list[[j]]$ld_matrix),size = 1000)
+    pca = princomp(region_list[[j]]$ld_matrix)
+    s_vd =  svd(region_list[[j]]$ld_matrix)
+    #https://en.wikipedia.org/wiki/Principal_component_regression
+    W = (region_list[[j]]$ld_matrix %*%  s_vd$v[,1:503])
+    plot(ginv((t(W)%*%W)) %*% t(s_vd$v[,1:503]) %*% (a$beta_gwas)
+    real= solve(g)
+    summary()
+    
+    legend = fread("/Users/smilefreak/Programming/OpenSource/MyGitHub/hess/causal_betas/dat/ct_and_ctg_bedfiles/cell_type_group_specific/legend.txt", header=F)
+    partition = which(legend$V4 == "IN")
+    not_partition = (!(1:ncol(region_list[[j]]$ld_matrix) %in% partition))
+    #chol_mat = chol(region_list[[j]]$ld_matrix,pivot=T)
+      #  s_vd= svd(region_list[[j]]$ld_matrix)
+       # betas = beta_local[[j]]
+       # test_d = 1/s_vd$d
+        #ondd
+    
+    argh = apply((apply(enrich[1:100,],1 , function(x){(x-x[1])})^2),1,mean)
+    sim_partition(3,region_list[[j]]$ld_matrix,h2_cat = 0.01 *5,h2_out = 0.01,n=5e5,category = !not_partition)
+       # res.sim = simulate_betas_w_ld(causal_number = 10,ld_matrix = region_list[[1]]$ld_matrix,h2=0.001,n=n,only_these_idxs=!not_partitionpartition) 
+    ld_compare = data.frame(ld1 = rep(NA,100),ld2 = rep(NA,100),ld3=rep(NA,100),ld4=rep(NA,100))
+    # Calculate bias of the estimator
+    #
+    (1-0.02)/n* sum(diag(ld_matrix[!not_partition,not_partition] %*% ginv(ld_matrix[not_partition,not_partition]) %*%t(ld_matrix[!not_partition,not_partition]) %*% ginv(ld_matrix[!not_partition,!not_partition])))
+    
+    
+      enrich = data.frame(h2=rep(NA,100),ratio=rep(NA,100),ld1 = rep(NA,100),ld2 = rep(NA,100),ld3=rep(NA,100),ld4=rep(NA,100),ld5=rep(NA,100),ld_score=rep(NA,100),biase_hess=rep(NA,100),new_ld_score=rep(NA,100), est_ols=rep(NA,100),new_projection=rep(NA,100),gold=rep(NA,100))
+    #enrich_small 
+    for(i in 1:100){
+      h2_out = abs(rnorm(n=1,mean=0.01,sd=0.05))
+      message(paste("H2 is ",h2_out))
+     a = sim_partition(10,100,region_list[[j]]$ld_matrix,h2_cat = 0.001,h2_out = h2_out,n=5e5,category = !not_partition,chol_mat=chol_mat)
+      
+      #a = simulate_betas_w_ld(causal_number = 10,ld_matrix = region_list[[1]]$ld_matrix,h2=0.001,n=n,chol_mat = chol_mat)
+      #res.sim3 = recapitulate_results(a,real,n=5e5,h2=a$h2_hess[1,1])
+      
+      
+      res.sim2 = recapitulate_results(a,region_list[[j]]$pseudo_inverse,n=5e5,h2=a$h2_hess[1,1])
+      cor(cbind(res.sim$true_beta,res.sim2$beta_hat,res.sim3$beta_hat))
+      sum(res.sim2$beta_hat^2/a$h2_hess[1,1])
+      true_beta_vec = rep(NA,nrow(region_list[[1]]$legend)[1])
+      true_beta_vec2 = rep(NA,nrow(region_list[[1]]$legend)[1])
+       sum_part=  rep(NA,nrow(region_list[[1]]$legend)[1])
+      for(idx in 1:(dim(region_list[[1]]$legend)[1])){
+        #  true_beta_vec = c(true_beta_vec,t(res.sim$true_beta[idx])  + region_list[[j]]$ld_matrix[idx,c(1:dim(region_list[[1]]$legend)[1])[-idx]]  %*% res.sim$true_beta[c(1:dim(region_list[[1]]$legend)[1])[-idx]]) 
+ 
+        
+     #   b[!not_partition] = 0
+        
+      #  g = (region_list[[1]]$pseudo_inverse) %*% b
+        
+        true_beta_vec[idx] =  t(a$true_beta[idx])^2 %*% region_list[[j]]$ld_matrix[idx,c(1:dim(region_list[[1]]$legend)[1])]  %*% a$true_beta[c(1:dim(region_list[[1]]$legend)[1])]
+         # Adjust for ommited variable bpias. 
+          
+          
+           #true_beta_vec2[idx] =  1/ld_score[idx] *t(a$true_beta[idx]) %*% region_list[[j]]$ld_matrix[idx,c(1:dim(region_list[[1]]$legend)[1])]  %*% a$true_beta[c(1:dim(region_list[[1]]$legend)[1])]
+        sum_part[idx] = t(res.sim2$beta_hat[idx]) %*% region_list[[1]]$ld_matrix[idx,c(1:dim(region_list[[1]]$legend)[1])]  %*% res.sim2$beta_hat[c(1:dim(region_list[[1]]$legend)[1])] 
+      #  print(t(res.sim2$beta_hat[idx])^2  + t(res.sim2$beta_hat[idx]) %*% region_list[[j]]$ld_matrix[idx,c(1:dim(region_list[[1]]$legend)[1])[-idx]]  %*% res.sim2$beta_hat[c(1:dim(region_list[[1]]$legend)[1])[-idx]])
+        #ld_score = c()
+     #   plot(n * a$beta_gwas * sum(region_list[[1]]$ld_matrix[idx])^2)
+      #  ld_score= apply(region_list[[1]]$ld_matrix[!not_partition,],1, function(x){sum(x[!not_partition]^2)})  * n + 1
+        
+       # summary(lm(n* a$beta_gwas[!not_partition]^2 ~ (ld_score)))
+        
+        #    ld_score= apply(region_list[[1]]$ld_matrix[not_partition,],1, function(x){sum(x[not_partition]^2)})  * n + 1
+        #summary(lm(n* a$beta_gwas[not_partition]^2 ~ -1 +  (ld_score)))
+        
+        
+        
+      }
+      # Unbiased within and out.
+      # true_beta_vec2 = true_beta_vec2 * sum(true_beta_vec)/sum(true_beta_vec2)
+      m1 = (glm(res.sim2$beta_hat^2 ~ legend$V4))
+      #coef(m1)[1]  * sum(!not_partition) 
+     # #sum(coef(m1)) * sum(not_partition) 
+      est_ols =  (coef(m1)[1]  * sum(!not_partition)) /  (sum(coef(m1)) * sum(not_partition) +  (coef(m1)[1]  * sum(!not_partition)))
+             test = a$true_beta 
+        test[!not_partition] =0
+        test2 = a$true_beta
+        test2[not_partition] = 0
+        b = ((region_list[[1]]$ld_matrix) %*% test2)
+        b2 = ((region_list[[1]]$ld_matrix) %*% test)
+        cat_in = sum(res.sim2$beta_hat[!not_partition]^2)+ sum(((region_list[[1]]$pseudo_inverse) %*% b2)[!not_partition]^2)
+        cat_out = sum(res.sim2$beta_hat[not_partition]^2)+ sum(((region_list[[1]]$pseudo_inverse) %*% b)[not_partition]^2)
+        gold = cat_in/(cat_in + cat_out)
+        test = res.sim2$beta_hat
+        test[!not_partition] =0
+        test2 = res.sim2$beta_hat
+        test2[not_partition] = 0
+        b = ((region_list[[1]]$ld_matrix) %*% test2)
+        b2 = ((region_list[[1]]$ld_matrix) %*% test)
+        cat_in = sum(res.sim2$beta_hat[!not_partition]^2)+ sum(((region_list[[1]]$pseudo_inverse) %*% b2)[!not_partition]^2)
+        cat_out = sum(res.sim2$beta_hat[not_partition]^2)+ sum(((region_list[[1]]$pseudo_inverse) %*% b)[not_partition]^2)
+        
+      ## Let's try somethnig
+    #  beta_in = a$true_beta[!not_partition] 
+     # beta_out =a$true_beta[not_partition]
+     #in_hess = t(beta_in) %*%   (region_list[[1]]$ld_matrix[!not_partition,!not_partition]) %*% (beta_in)
+     #out_hess = t(beta_out) %*%  (region_list[[1]]$ld_matrix[not_partition,not_partition]) %*% (beta_out)
+     
+     #bias =t(beta_in) %*%  (region_list[[1]]$ld_matrix[!not_partition,not_partition]) %*% (beta_out)
+     
+      #t(beta_out) %*%  (region_list[[1]]$ld_matrix[not_partition,!not_partition]) %*% (beta_in)
+     
+      #in_hess = ginv(region_list[[1]]$ld_matrix[!not_partition,!not_partition]) %*% a$beta_gwas[!not_partition]
+      #cov_data = cov(region_list[[1]]$ld_matrix[!not_partition,not_partition])
+      #out_hess = ginv(region_list[[1]]$ld_matrix[not_partition,not_partition]) %*% a$beta_gwas[not_partition]
+          
+      #t(in_hess) %*% cov_data %*% out_hess 
+      
+     #beta_new  = 1/n *  ginv(region_list[[1]]$ld_matrix[!not_partition,!not_partition]) %*%  (region_list[[1]]$ld_matrix[!not_partition,not_partition]) %*% ginv(region_list[[1]]$ld_matrix[not_partition,not_partition]) 
+      
+      
+     #out_hess = t(beta_out) %*%  cov(region_list[[1]]$ld_matrix[not_partition,not_partition]) %*% (beta_out)  
+       
+     ##### Try this one. 
+     
+     
+     #(in_hess  + 2 * bias)/(a$h2_hess)
+           
+      #beta_in
+      
+      
+     #out_hess = t(a$beta_gwas[not_partition]) %*%   ginv(region_list[[1]]$ld_matrix[not_partition,not_partition]) %*% a$beta_gwas[not_partition]  
+      
+    #sum(a$true_beta[!not_partition]^2)/sum(a$true_beta^2)
+      
+      
+     # plot(region_list[[1]]$ld_matrix[!not_partition,!not_partition] %*% res.sim2$beta_hat[!not_partition])
+      #plot(region_list[[1]]$ld_matrix[not_partition,not_partition] %*% res.sim2$beta_hat[not_partition])
+      
+      
+        ld_score_wow= apply(region_list[[1]]$ld_matrix[!not_partition,],1, function(x){sum(x[not_partition]^2)})
+      
+      (a$true_beta[!not_partition]^2) + sum(a$true_beta[partition])
+      
+      
+       out_biased =  t(res.sim2$beta_hat[not_partition]) %*% region_list[[1]]$ld_matrix[not_partition,not_partition] %*% res.sim2$beta_hat[not_partition] + t(res.sim2$beta_hat[!not_partition]) %*% region_list[[1]]$ld_matrix[!not_partition,not_partition] %*% res.sim2$beta_hat[not_partition]
+       
+       in_biased = t(res.sim2$beta_hat[!not_partition]) %*% region_list[[1]]$ld_matrix[!not_partition,!not_partition] %*% res.sim2$beta_hat[!not_partition] 
+       
+       ld_score_in= apply(region_list[[1]]$ld_matrix[!not_partition,],1, function(x){sum(x[!not_partition]^2)})  * n
+       chi_sq = n* a$beta_gwas[!not_partition]^2 - 1
+        m1 =(lm(chi_sq ~ -1 + (ld_score_in)))
+        ld_score=  apply(region_list[[1]]$ld_matrix,1, function(x){sum(x^2)})
+        ld_score_out= apply(region_list[[1]]$ld_matrix[not_partition,],1, function(x){sum(x[not_partition]^2)})  * n + 1
+       # ld_score_out= apply(region_list[[1]]$ld_matrix,1, function(x){sum(x^2)})  * n + 1
+        chi_sq = n* a$beta_gwas[not_partition]^2 - 1
+        #m1 =(lm(chi_sq ~ (ld_score_in)))
+        m2 = (lm(chi_sq ~  -1 + (ld_score_out))) 
+        x1 = coef(m1)[1] * sum(!not_partition)
+        x2 = coef(m2)[1] * sum(not_partition)
+        
+        
+        
+      print(cor(cbind(a$true_beta^2,(res.sim2$beta_hat^2)  * a$h2_hess[1,1]/sum(res.sim2$beta_hat^2),true_beta_vec,sum_part)))
+      ld_compare[i,] = c(a$h2_ld_score,a$h2_hess,sum((res.sim2$beta_hat^2)  * a$h2_hess[1,1]/sum(res.sim2$beta_hat^2)),sum(true_beta_vec))
+      res.sim2$b2 = (res.sim2$beta_hat^2* a$h2_hess[1,1] / sum(res.sim2$beta_hat^2))
+      
+      ld_score_tos = apply(region_list[[1]]$ld_matrix,1, function(x){sum(x^2)})
+      
+      #enrich[i,] = c(sum(a$true_beta[!not_partition]^2)/sum(a$true_beta[not_partition]^2),sum(res.sim2$b2[!not_partition])/sum(res.sim2$b2[not_partition]),sum(true_beta_vec[!not_partition])/sum(true_beta_vec[not_partition]),sum(sum_part[!not_partition])/sum(sum_part[not_partition]),sum(a$beta_gwas[!not_partition]^2)/sum(a$beta_gwas[not_partition]^2),x1/x2,in_biased/out_biased)
+      
+ #     true_beta_vec  = 1/ld_score[!not_partition] * true_beta_vec 
+        
+        m3 = (lm(res.sim2$beta_hat[!not_partition]^2 ~ -1 + ld_score[!not_partition]))
+        m4 = (lm(res.sim2$beta_hat[not_partition]^2 ~ -1 + ld_score[not_partition]))
+        x3 = coef(m3)[1] * sum(!not_partition)
+        x4 = coef(m4)[1] * sum(not_partition)
+        sum_part[ sum_part < 0] = 0
+            enrich[i,] = c(h2_out,sum(!not_partition)/length(not_partition),sum(a$true_beta[!not_partition]^2)/sum(a$true_beta^2),sum(res.sim2$b2[!not_partition])/sum(res.sim2$b2),sum(true_beta_vec[!not_partition])/sum(true_beta_vec),sum(sum_part[!not_partition])/sum(sum_part),sum(a$beta_gwas[!not_partition]^2)/sum(a$beta_gwas^2),x1/(x1+x2),in_biased/(out_biased + in_biased),x3/(x3+x4),est_ols, cat_in/(cat_in + cat_out),gold)
+            
+     #f2 =  ginv(ld_matrix[!not_partition,!not_partition]) %*% a$beta_gwas[!not_partition]
+     #f3 =  ginv(ld_matrix[not_partition,not_partition]) %*% a$beta_gwas[not_partition] 
+     #sum(f2^2)/(sum(f2^2)+ sum(f3^2))
+     #test = rep(NA,length(not_partition))
+     #test[not_partition] = f3
+     #test[!not_partition] = f2
+    }
+    
+    
+```
