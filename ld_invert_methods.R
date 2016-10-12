@@ -1,5 +1,14 @@
+
+pseudo_inv = function(ld_matrix){
+ library(MASS)
+  ginv(ld_matrix)
+  return(ld_matrix)
+}
+
 invert_ld_matrix_corcorp = function(ld_matrix){
   #Use default
+  
+  library(corcorp)
   ld_shrink = cor.shrink(ld_matrix)
   ld_inv = chol2inv(chol(ld_shrink))
   return(list(ld_matrix_inv=ld_inv,lambda=attr(ld_shrink, "lambda")))
