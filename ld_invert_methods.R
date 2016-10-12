@@ -1,7 +1,7 @@
 
 pseudo_inv = function(ld_matrix){
  library(MASS)
-  ginv(ld_matrix)
+  ld_matrix =  ginv(ld_matrix)
   return(ld_matrix)
 }
 
